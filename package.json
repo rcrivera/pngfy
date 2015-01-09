@@ -1,0 +1,11 @@
+{
+  "name": "thumb_coding_challenge",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "author": "",
+  "dependencies": {
+    "hapi": "^6.5.1",
+    "joi": "^4.7.0"
+  }
+}
