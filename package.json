@@ -5,6 +5,7 @@
   "main": "index.js",
   "author": "",
   "dependencies": {
+    "aws-sdk": "^2.1.5",
     "hapi": "^6.5.1",
     "joi": "^4.7.0"
   }
