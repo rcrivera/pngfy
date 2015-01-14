@@ -3,6 +3,7 @@ var Joi  = require('joi');
 var fs = require('fs');
 var path = require('path');
 var helpers = require('./helpers');
+var Q = require('q');
 
 var server = new Hapi.Server('0.0.0.0', '8000');
 
@@ -15,8 +16,16 @@ server.route({
 	config: {
 		handler: function(request, reply){
 			var file = request.payload.file;
-			var convert = helpers.convertToPng(file);
-			reply('links go here');
+			helpers.convertToPng(file).done(
+				function(file_urls){
+					console.log(file_urls);
+					reply(file_urls);
+				}, 
+				function(error){
+					console.error(error);
+					reply(error);
+				}
+			);
 		}
 	}
 });
@@ -25,8 +34,8 @@ server.route({
   method: 'GET',
   path: '/thumbs/{thumb_name}',
   handler: function (request, reply) {
-  	helpers.getFile(encodeURIComponent(request.params.thumb_name));
-  	reply('Hello!');
+  	var url = helpers.getFile(encodeURIComponent(request.params.thumb_name));
+  	reply(url);
   }
 });
 
