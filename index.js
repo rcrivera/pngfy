@@ -17,9 +17,9 @@ server.route({
 		handler: function(request, reply){
 			var file = request.payload.file;
 			helpers.convertToPng(file).done(
-				function(file_urls){
-					console.log(file_urls);
-					reply(file_urls);
+				function(response){
+					console.log(response);
+					reply(response);
 				}, 
 				function(error){
 					console.error(error);
@@ -32,10 +32,13 @@ server.route({
 
 server.route({
   method: 'GET',
-  path: '/thumbs/{thumb_name}',
+  path: '/thumbs/{thumb_name}/{page?}',
   handler: function (request, reply) {
-  	var url = helpers.getFile(encodeURIComponent(request.params.thumb_name));
-  	reply(url);
+  	var thumb_name = encodeURIComponent(request.params.thumb_name);
+  	var page = request.params.page ? encodeURIComponent(request.params.page) : false;
+  	helpers.getKey(thumb_name,page).done(function (response){
+  		reply(response);
+  	});
   }
 });
 
