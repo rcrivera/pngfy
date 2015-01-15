@@ -15,9 +15,9 @@ module.exports = {
 	convertToPng: function(file){
 		var deferred = Q.defer();
 		// Creates name for a temporary directory i.e. ./tmp/filename-1421207507
-		var dir = generateDirName(file);
+		var dir = generateDirName(file.filename);
 
-		create_tmp_directory(dir, file)
+		create_tmp_directory(dir, file.path)
 		.then(convertPdfToPng)
 		.then(getConvertedFiles)
 	  .then(uploadFiles)
