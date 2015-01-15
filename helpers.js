@@ -1,61 +1,62 @@
-var fs = require('fs');
-var aws = require('aws-sdk');
-var path = require('path');
+var Fs = require('fs');
+var Aws = require('aws-sdk');
+var Path = require('path');
 var Q = require('q');
-var rimraf = require('rimraf');
+var Rimraf = require('rimraf');
+var host = 'http://localhost:8000/';
+var thumbsPath = host + 'thumbs/';
 
-aws.config.update({
+Aws.config.update({
 	accessKeyId: process.env.PNGFY_AWS_ACCESS_KEY_ID,
 	secretAccessKey: process.env.PNGFY_AWS_SECRET_ACCESS_KEY
 });
 
-var s3bucket = new aws.S3({params: {Bucket: process.env.PNGFY_AWS_BUCKET}});
+var s3bucket = new Aws.S3({params: {Bucket: process.env.PNGFY_AWS_BUCKET}});
 
 module.exports = {
 	convertToPng: function(file){
 		var deferred = Q.defer();
 		// Creates name for a temporary directory i.e. ./tmp/filename-1421207507
-		var dir = generate_dir_name(file);
+		var dir = generateDirName(file);
 
 		create_tmp_directory(dir, file)
-		.then(convert_pdf_to_png)
-		.then(get_converted_files)
-	  .then(upload_files)
-	  .then(destroy_tmp_directory)
-	  .done(function (files_urls){
-	  	var response = {name: dir.split("/")[2], urls: files_urls};
+		.then(convertPdfToPng)
+		.then(getConvertedFiles)
+	  .then(uploadFiles)
+	  .then(destroyTmpDirectory)
+	  .done(function (filesUrls){
+	  	var response = {name: dir.split("/")[2], urls: filesUrls};
   		deferred.resolve(response);
   	});
 
 		return deferred.promise;
 	},
 
-  getKey: function(thumb_name, page){
+  getKey: function(thumbName, page){
   	var deferred = Q.defer();
   	if (page) {
-  		var thumb = thumb_name + '/' + page;
-  		s3bucket.getSignedUrl('getObject', {Key: thumb}, function(err, url){
+  		var thumb = thumbName + '/' + page;
+  		s3bucket.getObject({Key: thumb}, function(err, data){
   			if (err) {
 		    	console.log(err);
 		    	deferred.reject(err);
 		    }
 		    else {
-		    	url = url.substring(0, url.lastIndexOf("?"));
-    			deferred.resolve({url: url});
+    			deferred.resolve(data.Body);
 		    }
 			});  
   	}
   	else{
-  		s3bucket.listObjects({Marker: thumb_name}, function (err, res) {
+  		s3bucket.listObjects({Marker: thumbName}, function (err, res) {
 		    if (err) {
 		    	console.log(err);
 		    	deferred.reject(err);
 		    }
 		    else {
 		    	var files = res['Contents'];
-		    	var response = {name: thumb_name, urls: []};
+		    	var response = {name: thumbName, urls: []};
 		    	files.map(function(file){
-		    		response.urls.push(file['Key']);
+		    		response.urls.push(thumbsPath + file['Key']);
 		    	});
 		    	deferred.resolve(response);
 		  	}
@@ -65,75 +66,76 @@ module.exports = {
   }
 }
 
-var generate_dir_name = function(file){
-	var fileName = path.basename(file).split(".")[0];
+var generateDirName = function(file){
+	var fileName = Path.basename(file).split(".")[0];
 	var timestamp = Math.floor(new Date() / 1000); //Unix Timestamp
 	return './tmp/'+fileName+'-'+timestamp+'/';
 }
 
 var create_tmp_directory = function (dirName, file){
 	var deferred = Q.defer();
-	fs.mkdir(dirName, function(error) {
+	Fs.mkdir(dirName, function(error) {
 		error ? deferred.reject(error) : deferred.resolve({dirName: dirName, file: file});
 	});
 	return deferred.promise;
 }
 
-var destroy_tmp_directory = function (params){
+var destroyTmpDirectory = function (params){
 	var deferred = Q.defer();
-	rimraf(params['path'], function(err){
+	Rimraf(params['path'], function(err){
 		if (err) {
 			deferred.reject(err);
 		}
 		else {
-			deferred.resolve(params['files_urls']);
+			deferred.resolve(params['filesUrls']);
 		}
 	});
 	return deferred.promise;
 }
 
-var convert_pdf_to_png = function (params){
+var convertPdfToPng = function (params){
 	var deferred = Q.defer();
-	var output_directory = params['dirName'];
+	var outputDirectory = params['dirName'];
 	var file = params['file'];
-	var output_file_name = output_directory.split("/")[2] + '.png';
+	var outputFileName = outputDirectory.split("/")[2] + '.png';
 
-	var convertCommand = "convert " + file + " " + output_directory + output_file_name;
+	var convertCommand = "convert " + file + " " + outputDirectory + outputFileName;
 	var convertExec = require('child_process').exec, child;
 
 	child = convertExec(convertCommand,
-	  function (error, stdout, stderr) {
-	    console.log('stdout: ' + stdout);
-	    console.log('stderr: ' + stderr);
-	    if (error !== null) {
+	  function (err, stdout, stderr) {
+	    if (err) {
 	    	deferred.reject(err);
 	    }
+	    else if (stderr){
+	    	deferred.reject(stderr);
+	    }
 	    else{
-	    	deferred.resolve(output_directory);
+	    	deferred.resolve(outputDirectory);
 	    }
 		}
 	);
 	return deferred.promise;
 }
 
-var get_converted_files = function (dir){
+var getConvertedFiles = function (dir){
 	var deferred = Q.defer();
-	fs.readdir(dir, function (err, files){
+	Fs.readdir(dir, function (err, files){
 		if (err) {
 			deferred.reject(err);
 		}
 		else {
-			deferred.resolve({files: files.filter(filter_png), dir: dir});
+			deferred.resolve({files: files.filter(filterPng), dir: dir});
 		}
 	});
 	return deferred.promise;
 }
 
-var filter_png = function (file){
-	if (path.extname(file) == '.png') return file;
+var filterPng = function (file){
+	if (Path.extname(file) == '.png') return file;
 }
 
-var upload_files = function(params){
+var uploadFiles = function(params){
 	var files = params['files'];
 	var path = params['dir'];
 	var totalFiles = files.length;	
@@ -141,25 +143,26 @@ var upload_files = function(params){
 	for (var index in files) {
 		promises.push(processFile(path, files[index], index, totalFiles).then(uploadFile));
 	}
-	return Q.all(promises).then(function (files_urls){
+	return Q.all(promises).then(function (filesUrls){
 		var deferred = Q.defer();
-		deferred.resolve({files_urls: files_urls, path: path});
+		deferred.resolve({filesUrls: filesUrls, path: path});
 		return deferred.promise;
 	});
 }
 
-var processFile = function (path, file, index, totalFiles) {
+var processFile = function (pathToFile, file, index, totalFiles) {
 	var deferred = Q.defer();
-	fs.readFile(path + file, function (err, data) {
+	Fs.readFile(pathToFile + file, function (err, data) {
 	  if (err) {
 	  	deferred.reject(err);
 	  }
 	  else {
-	  	var bucketFilePath = path.split('/')[2]+'/';
-	  	var fileName = totalFiles > 1 ? file.substring(0, file.lastIndexOf("-")) : path.basename(file).split(".")[0];
+	  	var bucketFilePath = pathToFile.split('/')[2]+'/';
+	  	console.log(file);
+	  	var fileName = totalFiles > 1 ? file.substring(0, file.lastIndexOf("-")) : Path.basename(file).split(".")[0];
 	  	var bucketFileName = bucketFilePath+fileName +'_thumb_'+index+'.png';
 	  	var base64data = new Buffer(data, 'binary');
-	  	deferred.resolve({key: bucketFileName, data: base64data, path: file});
+	  	deferred.resolve({key: bucketFileName, data: data, path: file});
 	  }
 	});
 	return deferred.promise;
@@ -176,8 +179,7 @@ var uploadFile = function (params){
 	    } 
 	    else {
 	      console.log("Successfully uploaded " + params['key']);
-	      // fs.unlinkSync('./tmp/'+params['path']);
-	      deferred.resolve(params['key']);
+	      deferred.resolve(thumbsPath + params['key']);
 	    }
 	  });
 	});
