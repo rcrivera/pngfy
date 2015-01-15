@@ -2,8 +2,6 @@ var Hapi = require('hapi');
 var Joi  = require('joi');
 var Q = require('q');
 var Helpers = require('./helpers');
-var Fs = require('fs');
-var Path = require('path');
 
 // Set default node environment to development
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
