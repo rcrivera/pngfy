@@ -5,7 +5,9 @@ var Helpers = require('./helpers');
 
 // Set default node environment to development
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
-process.env.HOST = process.env.HOST || 'http://localhost:8000/';
+process.env.HOST = process.env.HOST || 'http://localhost:8000';
+
+console.log(process.env.HOST);
 
 var port = process.env.NODE_ENV == 'production' ? '8080' : '8000';
 var server = new Hapi.Server('0.0.0.0', port);

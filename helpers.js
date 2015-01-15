@@ -3,7 +3,6 @@ var Aws = require('aws-sdk');
 var Path = require('path');
 var Q = require('q');
 var Rimraf = require('rimraf');
-var thumbsPath = process.env.HOST  + 'thumbs/';
 
 Aws.config.update({
 	accessKeyId: process.env.PNGFY_AWS_ACCESS_KEY_ID,
@@ -60,7 +59,7 @@ module.exports = {
 		    	var files = res['Contents'];
 		    	var response = {name: thumbName, urls: []};
 		    	files.map(function(file){
-		    		response.urls.push(thumbsPath + file['Key']);
+		    		response.urls.push(process.env.HOST + '/thumbs/' + file['Key']);
 		    	});
 		    	deferred.resolve(response);
 		  	}
@@ -194,7 +193,7 @@ var uploadFile = function (params){
 	    } 
 	    else {
 	      console.log("Successfully uploaded " + params['key']);
-	      deferred.resolve(thumbsPath + params['key']);
+	      deferred.resolve(process.env.HOST + '/thumbs/' + params['key']);
 	    }
 	  });
 	});
