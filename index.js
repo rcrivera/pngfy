@@ -18,9 +18,9 @@ server.route({
 				console.log(response);
 				reply(response).type('application/json');
 			}, 
-			function(error){
-				console.error(error);
-				reply(response).type('application/json');
+			function(err){
+				console.error(err);
+				reply(err).type('application/json');
 			}
 		);
 	},

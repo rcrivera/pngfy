@@ -24,10 +24,15 @@ module.exports = {
 		.then(getConvertedFiles)
 	  .then(uploadFiles)
 	  .then(destroyTmpDirectory)
-	  .done(function (filesUrls){
-	  	var response = {name: dir.split("/")[2], urls: filesUrls};
-  		deferred.resolve(response);
-  	});
+	  .then(
+	  	function (filesUrls){
+		  	var response = {name: dir.split("/")[2], urls: filesUrls};
+	  		deferred.resolve(response);
+  		},
+  		function(err){
+  			deferred.reject({error:'Invalid request'});
+  		}
+  	);
 
 		return deferred.promise;
 	},
@@ -38,7 +43,7 @@ module.exports = {
   		var thumb = thumbName + '/' + page;
   		s3bucket.getObject({Key: thumb}, function(err, data){
   			if (err) {
-		    	console.log(err);
+		    	console.error(err);
 		    	deferred.reject(err);
 		    }
 		    else {
@@ -49,7 +54,7 @@ module.exports = {
   	else{
   		s3bucket.listObjects({Marker: thumbName}, function (err, res) {
 		    if (err) {
-		    	console.log(err);
+		    	console.error(err);
 		    	deferred.reject(err);
 		    }
 		    else {
@@ -74,8 +79,14 @@ var generateDirName = function(file){
 
 var create_tmp_directory = function (dirName, file){
 	var deferred = Q.defer();
-	Fs.mkdir(dirName, function(error) {
-		error ? deferred.reject(error) : deferred.resolve({dirName: dirName, file: file});
+	Fs.mkdir(dirName, function(err) {
+		if (err) {
+			console.error(err);
+			deferred.reject(err);
+		}
+		else {
+			deferred.resolve({dirName: dirName, file: file});
+		}
 	});
 	return deferred.promise;
 }
@@ -84,6 +95,7 @@ var destroyTmpDirectory = function (params){
 	var deferred = Q.defer();
 	Rimraf(params['path'], function(err){
 		if (err) {
+			console.error(err);
 			deferred.reject(err);
 		}
 		else {
@@ -105,10 +117,12 @@ var convertPdfToPng = function (params){
 	child = convertExec(convertCommand,
 	  function (err, stdout, stderr) {
 	    if (err) {
-	    	deferred.reject(err);
+	    	console.error(err)
+	    	deferred.reject("File is no valid or doesn't exist");
 	    }
 	    else if (stderr){
-	    	deferred.reject(stderr);
+	    	console.error(stderr)
+	    	deferred.reject("File is no valid or doesn't exist");
 	    }
 	    else{
 	    	deferred.resolve(outputDirectory);
@@ -122,6 +136,7 @@ var getConvertedFiles = function (dir){
 	var deferred = Q.defer();
 	Fs.readdir(dir, function (err, files){
 		if (err) {
+			console.error(err);
 			deferred.reject(err);
 		}
 		else {
@@ -154,6 +169,7 @@ var processFile = function (pathToFile, file, index, totalFiles) {
 	var deferred = Q.defer();
 	Fs.readFile(pathToFile + file, function (err, data) {
 	  if (err) {
+	  	console.error(err);
 	  	deferred.reject(err);
 	  }
 	  else {
@@ -174,7 +190,7 @@ var uploadFile = function (params){
 	  var file = {Key: params['key'], Body: params['data']};
 	  s3bucket.upload(file, function(err, data) {
 	    if (err) {
-	      console.log("Error uploading data: ", err);
+	      console.error("Error uploading data: ", err);
 	      deferred.reject(err);
 	    } 
 	    else {
