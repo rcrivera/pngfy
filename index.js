@@ -3,7 +3,12 @@ var Joi  = require('joi');
 var Q = require('q');
 var Helpers = require('./helpers');
 
-var server = new Hapi.Server('0.0.0.0', '8000');
+// Set default node environment to development
+process.env.NODE_ENV = process.env.NODE_ENV || 'development';
+process.env.HOST = process.env.HOST || 'http://localhost:8000/';
+
+var port = process.env.NODE_ENV == 'production' ? '8080' : '8000';
+var server = new Hapi.Server('0.0.0.0', port);
 
 // Sample request
 // curl -F "file=~/Downloads/r4.pdf" -i http://localhost:8000/pngfy

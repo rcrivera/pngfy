@@ -3,8 +3,7 @@ var Aws = require('aws-sdk');
 var Path = require('path');
 var Q = require('q');
 var Rimraf = require('rimraf');
-var host = 'http://localhost:8000/';
-var thumbsPath = host + 'thumbs/';
+var thumbsPath = process.env.HOST  + 'thumbs/';
 
 Aws.config.update({
 	accessKeyId: process.env.PNGFY_AWS_ACCESS_KEY_ID,
